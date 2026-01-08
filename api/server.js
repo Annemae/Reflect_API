@@ -11,18 +11,20 @@ app.use(express.json());
 app.use((req, res, next) => {
   const allowedOrigins = [
     "http://localhost:5174",
-    "https://reflect-direct-retrospective.web.app/"
+    "https://reflect-direct-retrospective.web.app"
   ];
   const origin = req.headers.origin || "";
   if (allowedOrigins.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
   }
+
+  // Required for preflight requests
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
   if (req.method === "OPTIONS") {
-    res.status(200).send("ok");
-    return;
+    // Must end the response for preflight
+    return res.status(200).end();
   }
 
   next();
