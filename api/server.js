@@ -9,7 +9,7 @@ app.use(express.json());
 // Preflight & CORS handling
 app.options("/v1/chat/completions", (req, res) => {
   const allowedOrigins = [
-    "http://localhost:5174",
+    "http://localhost:5173,
     "https://reflect-direct-retrospective.web.app"
   ];
   const origin = req.headers.origin;
