@@ -6,13 +6,16 @@ import ModelClient, { isUnexpected } from "@azure-rest/ai-inference";
 import { AzureKeyCredential } from "@azure/core-auth";
 
 const app = express();
-app.use(cors({
-  origin: "*",
-  methods: ["POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type"]
-}));
-app.options("*", cors());
+
 app.use(express.json());
+
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "http://localhost:5174"); // or "*" for now
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") return res.status(200).end();
+  next();
+});
 
 const token = process.env.GITHUB_TOKEN;
 const endpoint = "https://models.github.ai/inference";
@@ -21,27 +24,16 @@ const client = ModelClient(endpoint, new AzureKeyCredential(token));
 app.post("/v1/chat/completions", async (req, res) => {
   try {
     const { messages } = req.body;
-    if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({ error: "Missing or invalid 'messages' in request body" });
-    }
+    if (!messages || !Array.isArray(messages)) return res.status(400).json({ error: "Invalid messages" });
 
     const response = await client.path("/chat/completions").post({
-      body: {
-        model: "gpt-4o-mini",
-        messages,
-        temperature: 1,
-        top_p: 1
-      }
+      body: { model: "gpt-4o-mini", messages, temperature: 1, top_p: 1 }
     });
 
-    if (isUnexpected(response)) {
-      return res.status(500).json({ error: response.body.error });
-    }
+    if (isUnexpected(response)) return res.status(500).json({ error: response.body.error });
 
     const content = response.body.choices?.[0]?.message?.content;
-    if (!content) {
-      return res.status(500).json({ error: "No content returned from LLM" });
-    }
+    if (!content) return res.status(500).json({ error: "No content returned" });
 
     res.json({ content });
   } catch (err) {
