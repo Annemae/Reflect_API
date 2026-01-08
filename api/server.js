@@ -7,18 +7,24 @@ const app = express();
 
 app.use(express.json());
 
+// Manual CORS middleware
 app.use((req, res, next) => {
   const allowedOrigins = [
     "http://localhost:5174",
     "https://reflect-direct-retrospective.web.app/"
   ];
-  const origin = req.headers.origin;
+  const origin = req.headers.origin || "";
   if (allowedOrigins.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
   }
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  if (req.method === "OPTIONS") return res.status(200).end();
+
+  if (req.method === "OPTIONS") {
+    res.status(200).send("ok");
+    return;
+  }
+
   next();
 });
 
@@ -37,7 +43,9 @@ app.post("/v1/chat/completions", async (req, res) => {
       body: { model: "gpt-4o-mini", messages, temperature: 1, top_p: 1 }
     });
 
-    if (isUnexpected(response)) return res.status(500).json({ error: response.body.error });
+    if (isUnexpected(response)) {
+      return res.status(500).json({ error: response.body.error });
+    }
 
     const content = response.body.choices?.[0]?.message?.content;
     if (!content) return res.status(500).json({ error: "No content returned" });
