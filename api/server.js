@@ -1,38 +1,28 @@
-import express from "express";
+// api/server/v1/chat/completions.js
 import "dotenv/config";
 import ModelClient, { isUnexpected } from "@azure-rest/ai-inference";
 import { AzureKeyCredential } from "@azure/core-auth";
 
-const app = express();
-app.use(express.json());
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://reflect-direct-retrospective.web.app"
+];
 
-// Preflight & CORS handling
-app.options("/v1/chat/completions", (req, res) => {
-  const allowedOrigins = [
-    "http://localhost:5173,
-    "https://reflect-direct-retrospective.web.app"
-  ];
+export default async function handler(req, res) {
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
   }
   res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.status(204).end(); // Must end response for preflight
-});
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
 
-app.post("/v1/chat/completions", async (req, res) => {
-  // Add CORS headers here too for actual POST
-  const allowedOrigins = [
-    "http://localhost:5174",
-    "https://reflect-direct-retrospective.web.app"
-  ];
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
+  if (req.method === "OPTIONS") {
+    return res.status(204).end(); // preflight
   }
-  res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
   try {
     const { messages } = req.body;
@@ -55,11 +45,10 @@ app.post("/v1/chat/completions", async (req, res) => {
     const content = response.body.choices?.[0]?.message?.content;
     if (!content) return res.status(500).json({ error: "No content returned" });
 
-    res.json({ content });
+    return res.status(200).json({ content });
+
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
-});
-
-export default app;
+}
